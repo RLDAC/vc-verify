@@ -21,22 +21,92 @@ Vérificateur de Verifiable Credentials (VCs) conforme aux standards W3C.
 
 ## Installation
 
-### Python (Recommandé)
-
 ```bash
+# Cloner le repo
+git clone https://github.com/RLDAC/vc-verify.git
+cd vc-verify
+
+# Installer le package Python
 cd vc-verifier
 pip install -e .
 ```
 
-Avec les dépendances de développement :
+## Guide : Vérifier un credential
 
-```bash
-pip install -e ".[dev]"
+### Étape 1 : Préparer le credential
+
+Votre credential doit être un fichier JSON avec cette structure :
+
+```json
+{
+  "@context": ["https://www.w3.org/ns/credentials/v2"],
+  "id": "urn:uuid:259f734d-4fb1-4ef0-b971-1c8f47c65ae8",
+  "type": ["VerifiableCredential"],
+  "issuer": "did:web:example.com",
+  "validFrom": "2026-02-04T20:29:14.545651+00:00",
+  "credentialSubject": {
+    "id": "urn:uuid:d4658d2c-0b3d-49a9-a90b-350e4d9b4dc0",
+    "nom": "Jean Dupont"
+  },
+  "credentialStatus": {
+    "id": "https://example.com/.well-known/vc/status/revocation#2",
+    "type": "StatusList2021Entry",
+    "statusPurpose": "revocation",
+    "statusListIndex": "2",
+    "statusListCredential": "https://example.com/.well-known/vc/status/revocation"
+  },
+  "proof": {
+    "type": "DataIntegrityProof",
+    "cryptosuite": "ecdsa-jcs-2022",
+    "created": "2026-02-04T20:29:15.329402+00:00",
+    "verificationMethod": "did:web:example.com#key-1",
+    "proofPurpose": "assertionMethod",
+    "proofValue": "MEQCIBCxH3Fz8ieQtfccuBtA..."
+  }
+}
 ```
 
-## Utilisation
+### Étape 2 : Lancer la vérification
 
-### Ligne de commande
+```bash
+vc-verify mon_credential.json
+```
+
+### Étape 3 : Interpréter le résultat
+
+**Credential valide :**
+```
+╭──────────────────────────── Verification Result ─────────────────────────────╮
+│   Status                 VALID                                               │
+│   Credential ID          urn:uuid:259f734d-4fb1-4ef0-b971-1c8f47c65ae8       │
+│   Issuer                 did:web:example.com                                 │
+│   Proof                  Valid                                               │
+│   Cryptosuite            ecdsa-jcs-2022                                      │
+│   Verification Method    did:web:example.com#key-1                           │
+│   Credential Status      Valid                                               │
+│   Status Purpose         revocation                                          │
+│   Status Index           2                                                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
+
+**Credential invalide :**
+```
+╭──────────────────────────── Verification Result ─────────────────────────────╮
+│   Status                 INVALID                                             │
+│   Errors                 Signature verification failed                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
+
+### Options disponibles
+
+| Option | Description |
+|--------|-------------|
+| `--json-output` | Sortie au format JSON (pour intégration) |
+| `--no-status` | Ignorer la vérification de révocation |
+| `--no-ssl-verify` | Désactiver la vérification SSL |
+| `--timeout N` | Timeout HTTP en secondes (défaut: 30) |
+
+### Exemples
 
 ```bash
 # Vérifier un fichier local
@@ -45,18 +115,17 @@ vc-verify credential.json
 # Vérifier depuis une URL
 vc-verify https://example.com/credentials/123
 
-# Vérifier depuis stdin
+# Vérifier depuis stdin (pipe)
 cat credential.json | vc-verify -
 
-# Sortie JSON
+# Sortie JSON pour scripts
 vc-verify credential.json --json-output
 
 # Sans vérification de révocation
 vc-verify credential.json --no-status
-
-# Désactiver la vérification SSL
-vc-verify credential.json --no-ssl-verify
 ```
+
+## Utilisation avancée
 
 ### API Python
 
