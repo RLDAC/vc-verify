@@ -1,0 +1,21 @@
+{
+  "name": "vc-verify",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@digitalbazaar/data-integrity": "^2.5.0",
+    "@digitalbazaar/ecdsa-multikey": "^1.8.0",
+    "@digitalbazaar/vc": "^7.2.0",
+    "did-resolver": "^4.1.0",
+    "jsonld": "^9.0.0",
+    "node-fetch": "^3.3.2",
+    "web-did-resolver": "^2.0.32"
+  }
+}
