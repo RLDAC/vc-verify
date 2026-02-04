@@ -1,14 +1,20 @@
 {
   "name": "vc-verify",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "verify.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "verify": "node verify.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["verifiable-credentials", "did", "w3c", "ssi", "data-integrity"],
+  "author": "RLDAC <contact@rldac.com>",
+  "license": "MIT",
+  "description": "Verifiable Credentials verifier supporting W3C Data Integrity Proofs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RLDAC/vc-verify.git"
+  },
   "dependencies": {
     "@digitalbazaar/data-integrity": "^2.5.0",
     "@digitalbazaar/ecdsa-multikey": "^1.8.0",

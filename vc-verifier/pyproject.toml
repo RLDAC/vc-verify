@@ -42,8 +42,8 @@ dev = [
 vc-verify = "vc_verifier.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/RLDAC/vc-verifier"
-Repository = "https://github.com/RLDAC/vc-verifier"
+Homepage = "https://github.com/RLDAC/vc-verify"
+Repository = "https://github.com/RLDAC/vc-verify"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/vc_verifier"]

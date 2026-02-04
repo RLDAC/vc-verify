@@ -19,7 +19,7 @@ pip install vc-verifier
 Or from source:
 
 ```bash
-git clone https://github.com/RLDAC/vc-verifier.git
+git clone https://github.com/RLDAC/vc-verify.git
 cd vc-verifier
 pip install -e .
 ```
@@ -187,7 +187,7 @@ class StatusListChecker:
 
 ```bash
 # Clone
-git clone https://github.com/RLDAC/vc-verifier.git
+git clone https://github.com/RLDAC/vc-verify.git
 cd vc-verifier
 
 # Install dev dependencies
