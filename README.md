@@ -1,41 +1,41 @@
 # VC Verify
 
-Vérificateur de Verifiable Credentials (VCs) conforme aux standards W3C.
+W3C-compliant Verifiable Credentials (VCs) verifier.
 
-## Fonctionnalités
+## Features
 
-- **W3C Data Integrity Proofs** - Cryptosuite `ecdsa-jcs-2022`
-- **ECDSA P-256** (secp256r1) - Vérification de signatures
-- **did:web** - Résolution de DIDs
-- **StatusList2021** - Vérification de révocation/suspension
+- **W3C Data Integrity Proofs** - `ecdsa-jcs-2022` cryptosuite
+- **ECDSA P-256** (secp256r1) - Signature verification
+- **did:web** - DID resolution
+- **StatusList2021** - Revocation/suspension checking
 - **JCS** (JSON Canonicalization Scheme, RFC 8785)
 
-## Standards supportés
+## Supported Standards
 
 | Standard | Support |
 |----------|---------|
-| [W3C VC Data Model 2.0](https://www.w3.org/TR/vc-data-model-2.0/) | Complet |
+| [W3C VC Data Model 2.0](https://www.w3.org/TR/vc-data-model-2.0/) | Full |
 | [W3C Data Integrity](https://www.w3.org/TR/vc-data-integrity/) | `ecdsa-jcs-2022` |
-| [did:web](https://w3c-ccg.github.io/did-method-web/) | Complet |
-| [StatusList2021](https://www.w3.org/TR/vc-status-list/) | Révocation, Suspension |
+| [did:web](https://w3c-ccg.github.io/did-method-web/) | Full |
+| [StatusList2021](https://www.w3.org/TR/vc-status-list/) | Revocation, Suspension |
 
 ## Installation
 
 ```bash
-# Cloner le repo
+# Clone the repo
 git clone https://github.com/RLDAC/vc-verify.git
 cd vc-verify
 
-# Installer le package Python
+# Install the Python package
 cd vc-verifier
 pip install -e .
 ```
 
-## Guide : Vérifier un credential
+## Guide: Verify a Credential
 
-### Étape 1 : Préparer le credential
+### Step 1: Prepare the credential
 
-Votre credential doit être un fichier JSON avec cette structure :
+Your credential must be a JSON file with this structure:
 
 ```json
 {
@@ -46,7 +46,7 @@ Votre credential doit être un fichier JSON avec cette structure :
   "validFrom": "2026-02-04T20:29:14.545651+00:00",
   "credentialSubject": {
     "id": "urn:uuid:d4658d2c-0b3d-49a9-a90b-350e4d9b4dc0",
-    "nom": "Jean Dupont"
+    "name": "John Doe"
   },
   "credentialStatus": {
     "id": "https://example.com/.well-known/vc/status/revocation#2",
@@ -66,15 +66,15 @@ Votre credential doit être un fichier JSON avec cette structure :
 }
 ```
 
-### Étape 2 : Lancer la vérification
+### Step 2: Run verification
 
 ```bash
-vc-verify mon_credential.json
+vc-verify my_credential.json
 ```
 
-### Étape 3 : Interpréter le résultat
+### Step 3: Interpret the result
 
-**Credential valide :**
+**Valid credential:**
 ```
 ╭──────────────────────────── Verification Result ─────────────────────────────╮
 │   Status                 VALID                                               │
@@ -89,7 +89,7 @@ vc-verify mon_credential.json
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
-**Credential invalide :**
+**Invalid credential:**
 ```
 ╭──────────────────────────── Verification Result ─────────────────────────────╮
 │   Status                 INVALID                                             │
@@ -97,42 +97,42 @@ vc-verify mon_credential.json
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
-### Options disponibles
+### Available Options
 
 | Option | Description |
 |--------|-------------|
-| `--json-output` | Sortie au format JSON (pour intégration) |
-| `--no-status` | Ignorer la vérification de révocation |
-| `--no-ssl-verify` | Désactiver la vérification SSL |
-| `--timeout N` | Timeout HTTP en secondes (défaut: 30) |
+| `--json-output` | Output in JSON format (for integration) |
+| `--no-status` | Skip revocation check |
+| `--no-ssl-verify` | Disable SSL verification |
+| `--timeout N` | HTTP timeout in seconds (default: 30) |
 
-### Exemples
+### Examples
 
 ```bash
-# Vérifier un fichier local
+# Verify a local file
 vc-verify credential.json
 
-# Vérifier depuis une URL
+# Verify from URL
 vc-verify https://example.com/credentials/123
 
-# Vérifier depuis stdin (pipe)
+# Verify from stdin (pipe)
 cat credential.json | vc-verify -
 
-# Sortie JSON pour scripts
+# JSON output for scripts
 vc-verify credential.json --json-output
 
-# Sans vérification de révocation
+# Skip revocation check
 vc-verify credential.json --no-status
 ```
 
-## Utilisation avancée
+## Advanced Usage
 
-### API Python
+### Python API
 
 ```python
 from vc_verifier import verify_credential, VCVerifier
 
-# Vérification simple
+# Simple verification
 credential = {
     "@context": ["https://www.w3.org/ns/credentials/v2"],
     "type": ["VerifiableCredential"],
@@ -150,104 +150,104 @@ credential = {
 }
 
 result = verify_credential(credential)
-print(f"Valide: {result.is_valid}")
+print(f"Valid: {result.is_valid}")
 
-# Avec plus de contrôle
+# With more control
 verifier = VCVerifier(verify_status=True)
 result = verifier.verify(credential)
 
 if result.is_valid:
-    print("Credential valide!")
+    print("Credential is valid!")
 else:
-    print(f"Erreurs: {result.errors}")
+    print(f"Errors: {result.errors}")
 ```
 
 ## Architecture
 
 ```
 vc-verify/
-├── README.md                 # Ce fichier
-├── verify.js                 # Prototype JS (expérimental)
-├── package.json              # Config Node.js
-└── vc-verifier/              # Package Python (implémentation principale)
-    ├── pyproject.toml        # Config Python
-    ├── README.md             # Documentation détaillée
+├── README.md                 # This file
+├── verify.js                 # JS prototype (experimental)
+├── package.json              # Node.js config
+└── vc-verifier/              # Python package (main implementation)
+    ├── pyproject.toml        # Python config
+    ├── README.md             # Detailed documentation
     ├── LICENSE               # MIT
     ├── src/vc_verifier/
     │   ├── __init__.py       # Exports
-    │   ├── cli.py            # Interface ligne de commande
-    │   ├── verifier.py       # Logique de vérification
-    │   ├── did_resolver.py   # Résolution DID
-    │   └── statuslist.py     # Vérification StatusList2021
+    │   ├── cli.py            # Command-line interface
+    │   ├── verifier.py       # Verification logic
+    │   ├── did_resolver.py   # DID resolution
+    │   └── statuslist.py     # StatusList2021 verification
     └── tests/
-        └── test_verifier.py  # Tests unitaires
+        └── test_verifier.py  # Unit tests
 ```
 
-## Flux de vérification
+## Verification Flow
 
 ```
-Credential (fichier/URL/stdin)
+Credential (file/URL/stdin)
          │
          ▼
 ┌─────────────────────┐
-│  Validation         │
-│  structurelle       │
+│  Structure          │
+│  validation         │
 └─────────────────────┘
          │
          ▼
 ┌─────────────────────┐
-│  Résolution DID     │──► did:web → HTTPS → DID Document
+│  DID resolution     │──► did:web → HTTPS → DID Document
 │  (did_resolver.py)  │
 └─────────────────────┘
          │
          ▼
 ┌─────────────────────┐
-│  Vérification       │
-│  signature ECDSA    │──► JCS canonicalization + ECDSA P-256
+│  ECDSA signature    │
+│  verification       │──► JCS canonicalization + ECDSA P-256
 └─────────────────────┘
          │
          ▼
 ┌─────────────────────┐
-│  StatusList2021     │──► Vérification révocation/suspension
-│  (optionnel)        │
+│  StatusList2021     │──► Revocation/suspension check
+│  (optional)         │
 └─────────────────────┘
          │
          ▼
     VerificationResult
 ```
 
-## Développement
+## Development
 
 ```bash
 cd vc-verifier
 
-# Installer les dépendances dev
+# Install dev dependencies
 pip install -e ".[dev]"
 
-# Lancer les tests
+# Run tests
 pytest
 
 # Linting
 ruff check src tests
 ```
 
-## Codes de sortie CLI
+## CLI Exit Codes
 
-| Code | Signification |
-|------|---------------|
-| 0 | Credential valide |
-| 1 | Credential invalide |
-| 2 | Erreur |
+| Code | Meaning |
+|------|---------|
+| 0 | Valid credential |
+| 1 | Invalid credential |
+| 2 | Error |
 
 ## License
 
-MIT License - voir [vc-verifier/LICENSE](vc-verifier/LICENSE)
+MIT License - see [vc-verifier/LICENSE](vc-verifier/LICENSE)
 
-## Auteur
+## Author
 
 RLDAC - contact@rldac.com
 
-## Liens
+## Links
 
 - [W3C Verifiable Credentials](https://www.w3.org/TR/vc-data-model-2.0/)
 - [W3C Data Integrity](https://www.w3.org/TR/vc-data-integrity/)
