@@ -63,9 +63,8 @@ def format_result(result: VerificationResult) -> None:
         if result.proof.error:
             table.add_row("Proof Error", f"[red]{result.proof.error}[/]")
 
-    # Credential status
-    if result.credential_status:
-        cs = result.credential_status
+    # Credential status (may contain multiple entries: revocation, suspension, …)
+    for cs in result.credential_status:
         if cs.status == CredentialStatus.VALID:
             status_str = "[green]Valid[/]"
         elif cs.status == CredentialStatus.REVOKED:
@@ -74,9 +73,8 @@ def format_result(result: VerificationResult) -> None:
             status_str = "[yellow]Suspended[/]"
         else:
             status_str = "[dim]Unknown[/]"
-        table.add_row("Credential Status", status_str)
-        table.add_row("Status Purpose", cs.purpose)
-        table.add_row("Status Index", str(cs.index))
+        label = f"Status ({cs.purpose})"
+        table.add_row(label, f"{status_str}  [dim](index {cs.index})[/]")
 
     console.print(Panel(table, title="Verification Result", border_style=panel_style))
 
@@ -207,11 +205,14 @@ def main(
                     "verification_method": result.proof.verification_method if result.proof else None,
                     "error": result.proof.error if result.proof else None,
                 } if result.proof else None,
-                "credential_status": {
-                    "status": result.credential_status.status.value if result.credential_status else None,
-                    "purpose": result.credential_status.purpose if result.credential_status else None,
-                    "index": result.credential_status.index if result.credential_status else None,
-                } if result.credential_status else None,
+                "credential_status": [
+                    {
+                        "status": cs.status.value,
+                        "purpose": cs.purpose,
+                        "index": cs.index,
+                    }
+                    for cs in result.credential_status
+                ],
                 "errors": result.errors,
                 "warnings": result.warnings,
             }

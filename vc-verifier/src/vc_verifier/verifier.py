@@ -57,7 +57,7 @@ class VerificationResult:
     credential_id: str | None
     issuer: str | None
     proof: ProofVerificationResult | None = None
-    credential_status: StatusCheckResult | None = None
+    credential_status: list[StatusCheckResult] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
@@ -68,9 +68,9 @@ class VerificationResult:
             return False
         if self.proof and not self.proof.valid:
             return False
-        if self.credential_status and self.credential_status.status not in (
-            CredentialStatus.VALID,
-            None,
+        if any(
+            s.status not in (CredentialStatus.VALID,)
+            for s in self.credential_status
         ):
             return False
         return True
@@ -141,15 +141,16 @@ class VCVerifier:
         if not proof_result.valid:
             errors.append(f"Proof verification failed: {proof_result.error}")
 
-        # Check credential status
-        status_result: StatusCheckResult | None = None
+        # Check credential status (all entries: revocation + suspension)
+        status_results: list[StatusCheckResult] = []
         if self.verify_status:
             try:
-                status_result = self.statuslist_checker.check_status(credential)
-                if status_result and status_result.status == CredentialStatus.REVOKED:
-                    errors.append(status_result.message)
-                elif status_result and status_result.status == CredentialStatus.SUSPENDED:
-                    warnings.append(status_result.message)
+                status_results = self.statuslist_checker.check_status(credential)
+                for sr in status_results:
+                    if sr.status == CredentialStatus.REVOKED:
+                        errors.append(sr.message)
+                    elif sr.status == CredentialStatus.SUSPENDED:
+                        warnings.append(sr.message)
             except StatusListError as e:
                 warnings.append(f"Could not verify status: {e}")
 
@@ -166,7 +167,7 @@ class VCVerifier:
             credential_id=credential_id,
             issuer=issuer,
             proof=proof_result,
-            credential_status=status_result,
+            credential_status=status_results,
             errors=errors,
             warnings=warnings,
         )

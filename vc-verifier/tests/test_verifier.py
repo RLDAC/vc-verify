@@ -219,10 +219,10 @@ class TestStatusListChecker:
         }
 
         checker = StatusListChecker()
-        result = checker.check_status(credential)
+        results = checker.check_status(credential)
 
-        assert result is not None
-        assert result.status == CredentialStatus.VALID
+        assert len(results) == 1
+        assert results[0].status == CredentialStatus.VALID
 
     @respx.mock
     def test_check_status_revoked(self):
@@ -250,10 +250,113 @@ class TestStatusListChecker:
         }
 
         checker = StatusListChecker()
-        result = checker.check_status(credential)
+        results = checker.check_status(credential)
 
-        assert result is not None
-        assert result.status == CredentialStatus.REVOKED
+        assert len(results) == 1
+        assert results[0].status == CredentialStatus.REVOKED
+
+    def test_check_status_no_credential_status(self):
+        """Test credential without credentialStatus returns empty list."""
+        checker = StatusListChecker()
+        results = checker.check_status({"type": ["VerifiableCredential"]})
+        assert results == []
+
+    @respx.mock
+    def test_check_status_array_revocation_and_suspension(self):
+        """Test credential with both revocation and suspension status entries."""
+        # Revocation list: index 42 NOT revoked
+        revocation_sl = {
+            "@context": ["https://www.w3.org/ns/credentials/v2"],
+            "type": ["VerifiableCredential", "StatusList2021Credential"],
+            "credentialSubject": {
+                "type": "StatusList2021",
+                "statusPurpose": "revocation",
+                "encodedList": create_empty_statuslist(),
+            },
+        }
+        # Suspension list: index 7 IS suspended
+        suspension_sl = {
+            "@context": ["https://www.w3.org/ns/credentials/v2"],
+            "type": ["VerifiableCredential", "StatusList2021Credential"],
+            "credentialSubject": {
+                "type": "StatusList2021",
+                "statusPurpose": "suspension",
+                "encodedList": create_revoked_statuslist([7]),
+            },
+        }
+        respx.get("https://example.com/.well-known/vc/status/revocation").mock(
+            return_value=Response(200, json=revocation_sl)
+        )
+        respx.get("https://example.com/.well-known/vc/status/suspension").mock(
+            return_value=Response(200, json=suspension_sl)
+        )
+
+        credential = {
+            "credentialStatus": [
+                {
+                    "type": "StatusList2021Entry",
+                    "statusPurpose": "revocation",
+                    "statusListIndex": "42",
+                    "statusListCredential": "https://example.com/.well-known/vc/status/revocation",
+                },
+                {
+                    "type": "StatusList2021Entry",
+                    "statusPurpose": "suspension",
+                    "statusListIndex": "7",
+                    "statusListCredential": "https://example.com/.well-known/vc/status/suspension",
+                },
+            ]
+        }
+
+        checker = StatusListChecker()
+        results = checker.check_status(credential)
+
+        assert len(results) == 2
+        revocation_result = next(r for r in results if r.purpose == "revocation")
+        suspension_result = next(r for r in results if r.purpose == "suspension")
+        assert revocation_result.status == CredentialStatus.VALID
+        assert suspension_result.status == CredentialStatus.SUSPENDED
+
+    @respx.mock
+    def test_check_status_array_both_valid(self):
+        """Test credential with both entries valid."""
+        empty_sl = {
+            "@context": ["https://www.w3.org/ns/credentials/v2"],
+            "type": ["VerifiableCredential", "StatusList2021Credential"],
+            "credentialSubject": {
+                "type": "StatusList2021",
+                "encodedList": create_empty_statuslist(),
+            },
+        }
+        respx.get("https://example.com/.well-known/vc/status/revocation").mock(
+            return_value=Response(200, json=empty_sl)
+        )
+        respx.get("https://example.com/.well-known/vc/status/suspension").mock(
+            return_value=Response(200, json=empty_sl)
+        )
+
+        credential = {
+            "credentialStatus": [
+                {
+                    "type": "StatusList2021Entry",
+                    "statusPurpose": "revocation",
+                    "statusListIndex": "42",
+                    "statusListCredential": "https://example.com/.well-known/vc/status/revocation",
+                },
+                {
+                    "type": "StatusList2021Entry",
+                    "statusPurpose": "suspension",
+                    "statusListIndex": "7",
+                    "statusListCredential": "https://example.com/.well-known/vc/status/suspension",
+                },
+            ]
+        }
+
+        checker = StatusListChecker()
+        results = checker.check_status(credential)
+
+        assert len(results) == 2
+        assert all(r.status == CredentialStatus.VALID for r in results)
 
 
 class TestVCVerifier:

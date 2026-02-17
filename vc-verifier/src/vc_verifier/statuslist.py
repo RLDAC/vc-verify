@@ -70,95 +70,103 @@ class StatusListChecker:
 
     def parse_credential_status(
         self, credential: dict[str, Any]
-    ) -> StatusListEntry | None:
+    ) -> list[StatusListEntry]:
         """Parse credentialStatus from a VC.
+
+        Handles both a single credentialStatus object and an array
+        of statuses (e.g. one for revocation, one for suspension).
 
         Args:
             credential: The Verifiable Credential.
 
         Returns:
-            Parsed StatusListEntry or None if no status.
+            List of parsed StatusListEntry (empty if no status).
+
+        Raises:
+            StatusListError: If a StatusList2021Entry is malformed.
         """
         status_data = credential.get("credentialStatus")
         if not status_data:
-            return None
+            return []
 
-        # Handle both single status and array of statuses
-        if isinstance(status_data, list):
-            # For now, use the first StatusList2021Entry
-            for entry in status_data:
-                if entry.get("type") == "StatusList2021Entry":
-                    status_data = entry
-                    break
-            else:
-                return None
+        # Normalize to list
+        if not isinstance(status_data, list):
+            status_data = [status_data]
 
-        if status_data.get("type") != "StatusList2021Entry":
-            return None
+        entries: list[StatusListEntry] = []
+        for item in status_data:
+            if item.get("type") != "StatusList2021Entry":
+                continue
+            try:
+                entries.append(StatusListEntry(
+                    id=item.get("id"),
+                    type=item.get("type", "StatusList2021Entry"),
+                    status_list_credential=item["statusListCredential"],
+                    status_list_index=int(item["statusListIndex"]),
+                    status_purpose=item["statusPurpose"],
+                ))
+            except (KeyError, ValueError, TypeError) as e:
+                raise StatusListError(f"Invalid credentialStatus: {e}") from e
 
-        try:
-            return StatusListEntry(
-                id=status_data.get("id"),
-                type=status_data.get("type", "StatusList2021Entry"),
-                status_list_credential=status_data["statusListCredential"],
-                status_list_index=int(status_data["statusListIndex"]),
-                status_purpose=status_data["statusPurpose"],
-            )
-        except (KeyError, ValueError, TypeError) as e:
-            raise StatusListError(f"Invalid credentialStatus: {e}") from e
+        return entries
 
     def check_status(
         self,
         credential: dict[str, Any],
         use_cache: bool = True,
-    ) -> StatusCheckResult | None:
+    ) -> list[StatusCheckResult]:
         """Check the revocation/suspension status of a credential.
+
+        Checks every StatusList2021Entry present in credentialStatus
+        (supports both single object and array).
 
         Args:
             credential: The Verifiable Credential to check.
             use_cache: Whether to cache fetched StatusLists.
 
         Returns:
-            StatusCheckResult or None if no credentialStatus.
+            List of StatusCheckResult (empty if no credentialStatus).
 
         Raises:
             StatusListError: If status check fails.
         """
-        entry = self.parse_credential_status(credential)
-        if entry is None:
-            return None
+        entries = self.parse_credential_status(credential)
+        if not entries:
+            return []
 
-        # Fetch and decode the StatusList
-        bitstring = self._fetch_statuslist(
-            entry.status_list_credential,
-            use_cache=use_cache,
-        )
+        results: list[StatusCheckResult] = []
+        for entry in entries:
+            # Fetch and decode the StatusList
+            bitstring = self._fetch_statuslist(
+                entry.status_list_credential,
+                use_cache=use_cache,
+            )
 
-        # Check the bit at the specified index
-        is_set = self._get_bit(bitstring, entry.status_list_index)
+            # Check the bit at the specified index
+            is_set = self._get_bit(bitstring, entry.status_list_index)
 
-        if is_set:
-            # Bit is set = credential is revoked/suspended
-            if entry.status_purpose == "revocation":
-                status = CredentialStatus.REVOKED
-                message = f"Credential is revoked (index {entry.status_list_index})"
-            elif entry.status_purpose == "suspension":
-                status = CredentialStatus.SUSPENDED
-                message = f"Credential is suspended (index {entry.status_list_index})"
+            if is_set:
+                if entry.status_purpose == "revocation":
+                    status = CredentialStatus.REVOKED
+                    message = f"Credential is revoked (index {entry.status_list_index})"
+                elif entry.status_purpose == "suspension":
+                    status = CredentialStatus.SUSPENDED
+                    message = f"Credential is suspended (index {entry.status_list_index})"
+                else:
+                    status = CredentialStatus.UNKNOWN
+                    message = f"Unknown status purpose: {entry.status_purpose}"
             else:
-                status = CredentialStatus.UNKNOWN
-                message = f"Unknown status purpose: {entry.status_purpose}"
-        else:
-            # Bit is not set = credential is valid
-            status = CredentialStatus.VALID
-            message = f"Credential status is valid (index {entry.status_list_index})"
+                status = CredentialStatus.VALID
+                message = f"Credential status is valid ({entry.status_purpose}, index {entry.status_list_index})"
 
-        return StatusCheckResult(
-            status=status,
-            purpose=entry.status_purpose,
-            index=entry.status_list_index,
-            message=message,
-        )
+            results.append(StatusCheckResult(
+                status=status,
+                purpose=entry.status_purpose,
+                index=entry.status_list_index,
+                message=message,
+            ))
+
+        return results
 
     def _fetch_statuslist(self, url: str, use_cache: bool = True) -> bytes:
         """Fetch and decode a StatusList credential.
